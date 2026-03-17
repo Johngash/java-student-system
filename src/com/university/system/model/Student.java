@@ -1,9 +1,5 @@
 package com.university.system.model;
 
-/**
- * Represents a student in the university system.
- * Inherits from Person.
- */
 public class Student extends Person {
     private String studentId;
     private String major;

@@ -1,7 +1,4 @@
 package com.university.system.model;(
 
-public class Book {
-    public Book(){
-        
-    }
+public class Book
 }

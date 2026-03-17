@@ -1,6 +1,6 @@
 package com.university.system.model;
 
-ls/**
+/**
  * Represents a lecturer in the university system.
  * Inherits from Person.
  */
