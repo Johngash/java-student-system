@@ -1,168 +1,241 @@
 package com.university.system.controller;
 
-import model.Student;
-import model.DatabaseConnection;
-
+import com.university.system.database.DatabaseConnection;
+import com.university.system.model.Student;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class StudentController {
 
-    // =========================
-    // CREATE (INSERT)
-    // =========================
-    public boolean addStudent(String regNumber, String name, String programme) {
+  // =========================
+  // CREATE (INSERT)
+  // =========================
+  public boolean addStudent(Student student) {
+    String sqlPerson =
+        "INSERT INTO person (first_name, last_name, email, phone, address, person_type) VALUES (?,"
+            + " ?, ?, ?, ?, 'student')";
+    String sqlStudent =
+        "INSERT INTO student (id, registration_number, programme, enrollment_date, current_year)"
+            + " VALUES (?, ?, ?, ?, ?)";
 
-        String sql = "INSERT INTO students (reg_number, name, programme) VALUES (?, ?, ?)";
+    try (Connection conn = DatabaseConnection.getConnection()) {
+      conn.setAutoCommit(false); // Start transaction
 
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+      try (PreparedStatement psPerson =
+          conn.prepareStatement(sqlPerson, Statement.RETURN_GENERATED_KEYS)) {
+        psPerson.setString(1, student.getFirstName());
+        psPerson.setString(2, student.getLastName());
+        psPerson.setString(3, student.getEmail());
+        psPerson.setString(4, student.getPhone());
+        psPerson.setString(5, student.getAddress());
 
-            // Set values
-            stmt.setString(1, regNumber);
-            stmt.setString(2, name);
-            stmt.setString(3, programme);
+        int affectedRows = psPerson.executeUpdate();
+        if (affectedRows == 0) throw new SQLException("Creating person failed.");
 
-            // Execute query
-            int rowsInserted = stmt.executeUpdate();
+        try (ResultSet generatedKeys = psPerson.getGeneratedKeys()) {
+          if (generatedKeys.next()) {
+            int personId = generatedKeys.getInt(1);
+            student.setId(personId);
 
-            return rowsInserted > 0;
-
-        } catch (SQLException e) {
-            System.out.println("Error adding student:");
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    // =========================
-    // READ (GET ONE STUDENT)
-    // =========================
-    public Student getStudent(String regNumber) {
-
-        String sql = "SELECT * FROM students WHERE reg_number = ?";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, regNumber);
-
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                String name = rs.getString("name");
-                String programme = rs.getString("programme");
-
-                return new Student(regNumber, name, programme);
+            try (PreparedStatement psStudent = conn.prepareStatement(sqlStudent)) {
+              psStudent.setInt(1, personId);
+              psStudent.setString(2, student.getRegistrationNumber());
+              psStudent.setString(3, student.getProgramme());
+              psStudent.setDate(4, Date.valueOf(student.getEnrollmentDate()));
+              psStudent.setInt(5, student.getCurrentYear());
+              psStudent.executeUpdate();
             }
-
-        } catch (SQLException e) {
-            System.out.println("Error retrieving student:");
-            e.printStackTrace();
+          } else {
+            throw new SQLException("Creating person failed, no ID obtained.");
+          }
         }
-
-        return null;
-    }
-
-    // =========================
-    // READ (GET ALL STUDENTS)
-    // =========================
-    public List<Student> getAllStudents() {
-
-        List<Student> studentList = new ArrayList<>();
-        String sql = "SELECT * FROM students";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-
-            while (rs.next()) {
-
-                String regNumber = rs.getString("reg_number");
-                String name = rs.getString("name");
-                String programme = rs.getString("programme");
-
-                Student student = new Student(regNumber, name, programme);
-                studentList.add(student);
-            }
-
-        } catch (SQLException e) {
-            System.out.println("Error retrieving all students:");
-            e.printStackTrace();
-        }
-
-        return studentList;
-    }
-
-    // =========================
-    // UPDATE
-    // =========================
-    public boolean updateStudent(String regNumber, String name, String programme) {
-
-        String sql = "UPDATE students SET name = ?, programme = ? WHERE reg_number = ?";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, name);
-            stmt.setString(2, programme);
-            stmt.setString(3, regNumber);
-
-            int rowsUpdated = stmt.executeUpdate();
-
-            return rowsUpdated > 0;
-
-        } catch (SQLException e) {
-            System.out.println("Error updating student:");
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    // =========================
-    // DELETE
-    // =========================
-    public boolean deleteStudent(String regNumber) {
-
-        String sql = "DELETE FROM students WHERE reg_number = ?";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, regNumber);
-
-            int rowsDeleted = stmt.executeUpdate();
-
-            return rowsDeleted > 0;
-
-        } catch (SQLException e) {
-            System.out.println("Error deleting student:");
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    // =========================
-    // VALIDATION (OPTIONAL BUT IMPORTANT)
-    // =========================
-    public boolean validateStudent(String regNumber, String name, String programme) {
-
-        if (regNumber == null || regNumber.isEmpty()) {
-            System.out.println("Registration number is required");
-            return false;
-        }
-
-        if (name == null || name.isEmpty()) {
-            System.out.println("Name is required");
-            return false;
-        }
-
-        if (programme == null || programme.isEmpty()) {
-            System.out.println("Programme is required");
-            return false;
-        }
-
+        conn.commit();
         return true;
+      } catch (SQLException e) {
+        conn.rollback();
+        e.printStackTrace();
+        return false;
+      }
+    } catch (SQLException e) {
+      e.printStackTrace();
+      return false;
     }
+  }
+
+  // =========================
+  // READ (GET ONE STUDENT)
+  // =========================
+  public Student getStudent(String regNumber) {
+    String sql =
+        "SELECT p.*, s.registration_number, s.programme, s.enrollment_date, s.current_year "
+            + "FROM person p JOIN student s ON p.id = s.id "
+            + "WHERE s.registration_number = ?";
+
+    try (Connection conn = DatabaseConnection.getConnection();
+        PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+      stmt.setString(1, regNumber);
+      try (ResultSet rs = stmt.executeQuery()) {
+        if (rs.next()) {
+          return new Student(
+              rs.getInt("id"),
+              rs.getString("first_name"),
+              rs.getString("last_name"),
+              rs.getString("email"),
+              rs.getString("phone"),
+              rs.getString("address"),
+              rs.getBoolean("is_active"),
+              rs.getString("registration_number"),
+              rs.getString("programme"),
+              rs.getDate("enrollment_date").toLocalDate(),
+              rs.getInt("current_year"));
+        }
+      }
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+    return null;
+  }
+
+  // =========================
+  // READ (GET ALL STUDENTS)
+  // =========================
+  public List<Student> getAllStudents() {
+    List<Student> studentList = new ArrayList<>();
+    String sql =
+        "SELECT p.*, s.registration_number, s.programme, s.enrollment_date, s.current_year "
+            + "FROM person p JOIN student s ON p.id = s.id";
+
+    try (Connection conn = DatabaseConnection.getConnection();
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery(sql)) {
+
+      while (rs.next()) {
+        studentList.add(
+            new Student(
+                rs.getInt("id"),
+                rs.getString("first_name"),
+                rs.getString("last_name"),
+                rs.getString("email"),
+                rs.getString("phone"),
+                rs.getString("address"),
+                rs.getBoolean("is_active"),
+                rs.getString("registration_number"),
+                rs.getString("programme"),
+                rs.getDate("enrollment_date").toLocalDate(),
+                rs.getInt("current_year")));
+      }
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+    return studentList;
+  }
+
+  // =========================
+  // READ (GET ONE STUDENT BY ID)
+  // =========================
+  public Student getStudentById(int personId) {
+    String sql =
+        "SELECT p.*, s.registration_number, s.programme, s.enrollment_date, s.current_year "
+            + "FROM person p JOIN student s ON p.id = s.id "
+            + "WHERE p.id = ?";
+
+    try (Connection conn = DatabaseConnection.getConnection();
+        PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+      stmt.setInt(1, personId);
+      try (ResultSet rs = stmt.executeQuery()) {
+        if (rs.next()) {
+          return new Student(
+              rs.getInt("id"),
+              rs.getString("first_name"),
+              rs.getString("last_name"),
+              rs.getString("email"),
+              rs.getString("phone"),
+              rs.getString("address"),
+              rs.getBoolean("is_active"),
+              rs.getString("registration_number"),
+              rs.getString("programme"),
+              rs.getDate("enrollment_date").toLocalDate(),
+              rs.getInt("current_year"));
+        }
+      }
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+    return null;
+  }
+
+  // =========================
+  // UPDATE
+  // =========================
+  public boolean updateStudent(Student student) {
+    String sqlPerson = "UPDATE person SET first_name=?, last_name=?, email=?, phone=?, address=? WHERE id=?";
+    String sqlStudent = "UPDATE student SET programme=?, current_year=? WHERE id=?";
+
+    try (Connection conn = DatabaseConnection.getConnection()) {
+        conn.setAutoCommit(false);
+        try (PreparedStatement psPerson = conn.prepareStatement(sqlPerson);
+             PreparedStatement psStudent = conn.prepareStatement(sqlStudent)) {
+
+            psPerson.setString(1, student.getFirstName());
+            psPerson.setString(2, student.getLastName());
+            psPerson.setString(3, student.getEmail());
+            psPerson.setString(4, student.getPhone());
+            psPerson.setString(5, student.getAddress());
+            psPerson.setInt(6, student.getId());
+            psPerson.executeUpdate();
+
+            psStudent.setString(1, student.getProgramme());
+            psStudent.setInt(2, student.getCurrentYear());
+            psStudent.setInt(3, student.getId());
+            psStudent.executeUpdate();
+
+            conn.commit();
+            return true;
+        } catch (SQLException e) {
+            conn.rollback();
+            e.printStackTrace();
+            return false;
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+        return false;
+    }
+  }
+
+    // =========================
+  // DEACTIVATE
+  // =========================
+  public boolean deactivateStudent(int personId) {
+      String sql = "UPDATE person SET is_active = 0 WHERE id = ?";
+      try (Connection conn = DatabaseConnection.getConnection();
+           PreparedStatement stmt = conn.prepareStatement(sql)) {
+          stmt.setInt(1, personId);
+          return stmt.executeUpdate() > 0;
+      } catch (SQLException e) {
+          e.printStackTrace();
+          return false;
+      }
+  }
+
+  // =========================
+  // DELETE
+  // =========================
+  public boolean deleteStudent(int personId) {
+    // Due to ON DELETE CASCADE, deleting from person deletes from student too
+    String sql = "DELETE FROM person WHERE id = ?";
+
+    try (Connection conn = DatabaseConnection.getConnection();
+        PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+      stmt.setInt(1, personId);
+      return stmt.executeUpdate() > 0;
+
+    } catch (SQLException e) {
+      e.printStackTrace();
+      return false;
+    }
+  }
 }

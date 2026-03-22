@@ -1,44 +1,48 @@
 package com.university.system.model;
 
+import java.time.LocalDate;
+
 /**
  * Represents a lecturer in the university system.
  * Inherits from Person.
  */
 public class Lecturer extends Person {
-    private String employeeId;
+    private String staffNumber;
     private String department;
+    private LocalDate hireDate;
+    private String specialization;
 
     public Lecturer() {
         super();
     }
 
-    public Lecturer(int id, String name, String email, String phone, String employeeId, String department) {
-        super(id, name, email, phone);
-        this.employeeId = employeeId;
+    public Lecturer(int id, String firstName, String lastName, String email, String phone, String address, boolean isActive,
+                    String staffNumber, String department, LocalDate hireDate, String specialization) {
+        super(id, firstName, lastName, email, phone, address, isActive);
+        this.staffNumber = staffNumber;
         this.department = department;
+        this.hireDate = hireDate;
+        this.specialization = specialization;
     }
 
-    public String getEmployeeId() {
-        return employeeId;
-    }
+    public String getStaffNumber() { return staffNumber; }
+    public void setStaffNumber(String staffNumber) { this.staffNumber = staffNumber; }
 
-    public void setEmployeeId(String employeeId) {
-        this.employeeId = employeeId;
-    }
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
 
-    public String getDepartment() {
-        return department;
-    }
+    public LocalDate getHireDate() { return hireDate; }
+    public void setHireDate(LocalDate hireDate) { this.hireDate = hireDate; }
 
-    public void setDepartment(String department) {
-        this.department = department;
-    }
+    public String getSpecialization() { return specialization; }
+    public void setSpecialization(String specialization) { this.specialization = specialization; }
 
     @Override
     public String toString() {
         return "Lecturer{" +
-                "employeeId='" + employeeId + '\'' +
+                "staffNumber='" + staffNumber + '\'' +
                 ", department='" + department + '\'' +
+                ", specialization='" + specialization + '\'' +
                 "} " + super.toString();
     }
 }
