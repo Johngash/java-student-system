@@ -57,6 +57,21 @@ public class Book {
     public int getAvailableCopies() { return availableCopies; }
     public void setAvailableCopies(int availableCopies) { this.availableCopies = availableCopies; }
 
+    public int getBorrowedCopies() {
+        return totalCopies - availableCopies;
+    }
+
+    public int getOverdueCopies() {
+        // Placeholder, logic depends on borrow records, but used in UI
+        return 0;
+    }
+
+    public void returnCopy() {
+        if (availableCopies < totalCopies) {
+            availableCopies++;
+        }
+    }
+
     public boolean isAvailable() {
         return availableCopies > 0;
     }

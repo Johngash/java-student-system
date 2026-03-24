@@ -16,6 +16,26 @@ public class LibraryController {
     // BOOK MANAGEMENT
     // =========================
 
+    public boolean addBook(Book book) {
+        String sql = "INSERT INTO book (isbn, title, author, publisher, edition, version, year_published, total_copies, available_copies) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, book.getIsbn());
+            stmt.setString(2, book.getTitle());
+            stmt.setString(3, book.getAuthor());
+            stmt.setString(4, book.getPublisher());
+            stmt.setString(5, book.getEdition());
+            stmt.setString(6, book.getVersion());
+            stmt.setInt(7, book.getYearPublished());
+            stmt.setInt(8, book.getTotalCopies());
+            stmt.setInt(9, book.getAvailableCopies());
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     public List<Book> getAllBooks() {
         List<Book> books = new ArrayList<>();
         String sql = "SELECT * FROM book";
@@ -31,10 +51,10 @@ public class LibraryController {
         return books;
     }
 
-    public List<Book> searchBooks(String term) {
+    public List<Book> searchBooks(String keyword) {
         List<Book> books = new ArrayList<>();
         String sql = "SELECT * FROM book WHERE title LIKE ? OR author LIKE ? OR isbn LIKE ?";
-        String pattern = "%" + term + "%";
+        String pattern = "%" + keyword + "%";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, pattern);
@@ -71,13 +91,27 @@ public class LibraryController {
     // BORROWING & RETURNS
     // =========================
 
-    public boolean borrowBook(int studentId, String isbn) {
+    public boolean borrowBook(String studentRegNumber, String isbn) {
+        String findStudentSql = "SELECT id FROM student WHERE registration_number = ?";
         String checkSql = "SELECT available_copies FROM book WHERE isbn = ?";
         String insertRecordSql = "INSERT INTO borrow_record (book_isbn, student_id, borrow_date, due_date, status) VALUES (?, ?, ?, ?, 'borrowed')";
         String updateBookSql = "UPDATE book SET available_copies = available_copies - 1 WHERE isbn = ?";
 
         try (Connection conn = DatabaseConnection.getConnection()) {
             conn.setAutoCommit(false);
+
+            int studentId = -1;
+            try(PreparedStatement findStudentStmt = conn.prepareStatement(findStudentSql)) {
+                findStudentStmt.setString(1, studentRegNumber);
+                try(ResultSet rs = findStudentStmt.executeQuery()) {
+                    if(rs.next()) {
+                        studentId = rs.getInt("id");
+                    } else {
+                        return false; // Student not found
+                    }
+                }
+            }
+
             try (PreparedStatement checkStmt = conn.prepareStatement(checkSql);
                  PreparedStatement insertStmt = conn.prepareStatement(insertRecordSql);
                  PreparedStatement updateStmt = conn.prepareStatement(updateBookSql)) {
@@ -116,28 +150,44 @@ public class LibraryController {
         }
     }
 
-    public boolean returnBook(int borrowRecordId) {
-        String getRecordSql = "SELECT * FROM borrow_record WHERE id = ?";
+    public boolean returnBook(String studentRegNumber, String isbn) {
+        String findStudentSql = "SELECT id FROM student WHERE registration_number = ?";
+        String getRecordSql = "SELECT * FROM borrow_record WHERE student_id = ? AND book_isbn = ? AND status = 'borrowed'";
         String updateRecordSql = "UPDATE borrow_record SET return_date = ?, status = 'returned', fine_amount = ? WHERE id = ?";
         String updateBookSql = "UPDATE book SET available_copies = available_copies + 1 WHERE isbn = ?";
 
         try (Connection conn = DatabaseConnection.getConnection()) {
             conn.setAutoCommit(false);
+            
+            int studentId = -1;
+            try(PreparedStatement findStudentStmt = conn.prepareStatement(findStudentSql)) {
+                findStudentStmt.setString(1, studentRegNumber);
+                try(ResultSet rs = findStudentStmt.executeQuery()) {
+                    if(rs.next()) {
+                        studentId = rs.getInt("id");
+                    } else {
+                        return false; // Student not found
+                    }
+                }
+            }
+            
             try (PreparedStatement getStmt = conn.prepareStatement(getRecordSql);
                  PreparedStatement updateRecStmt = conn.prepareStatement(updateRecordSql);
                  PreparedStatement updateBookStmt = conn.prepareStatement(updateBookSql)) {
 
                 // 1. Get record details
-                getStmt.setInt(1, borrowRecordId);
-                String isbn = null;
+                getStmt.setInt(1, studentId);
+                getStmt.setString(2, isbn);
+                
+                int borrowRecordId = -1;
                 LocalDate dueDate = null;
+
                 try (ResultSet rs = getStmt.executeQuery()) {
                     if (rs.next()) {
-                        isbn = rs.getString("book_isbn");
+                        borrowRecordId = rs.getInt("id");
                         dueDate = rs.getDate("due_date").toLocalDate();
-                        if ("returned".equals(rs.getString("status"))) return false; // Already returned
                     } else {
-                        return false;
+                        return false; // No active borrow record found
                     }
                 }
 
@@ -176,14 +226,31 @@ public class LibraryController {
     // RESERVATIONS
     // =========================
 
-    public boolean reserveBook(int studentId, String isbn) {
+    public boolean reserveBook(String studentRegNumber, String isbn) {
+        String findStudentSql = "SELECT id FROM student WHERE registration_number = ?";
         String sql = "INSERT INTO reservation (book_isbn, student_id, reservation_date, status) VALUES (?, ?, ?, 'pending')";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, isbn);
-            stmt.setInt(2, studentId);
-            stmt.setDate(3, Date.valueOf(LocalDate.now()));
-            return stmt.executeUpdate() > 0;
+        
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            
+            int studentId = -1;
+            try(PreparedStatement findStudentStmt = conn.prepareStatement(findStudentSql)) {
+                findStudentStmt.setString(1, studentRegNumber);
+                try(ResultSet rs = findStudentStmt.executeQuery()) {
+                    if(rs.next()) {
+                        studentId = rs.getInt("id");
+                    } else {
+                        return false; // Student not found
+                    }
+                }
+            }
+
+            try(PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, isbn);
+                stmt.setInt(2, studentId);
+                stmt.setDate(3, Date.valueOf(LocalDate.now()));
+                return stmt.executeUpdate() > 0;
+            }
+
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
@@ -222,11 +289,11 @@ public class LibraryController {
         return new Book(
             rs.getString("isbn"),
             rs.getString("title"),
+            rs.getString("author"),
+            rs.getString("publisher"),
             rs.getString("edition"),
             rs.getString("version"),
             rs.getInt("year_published"),
-            rs.getString("publisher"),
-            rs.getString("author"),
             rs.getInt("total_copies"),
             rs.getInt("available_copies")
         );

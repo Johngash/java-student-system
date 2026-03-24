@@ -30,7 +30,6 @@ student-library-system/
 │               │   ├── LecturerController.java
 │               │   └── LibraryController.java
 │               └── view/
-│                   ├── MainWindow.java
 │                   ├── StudentPanel.java
 │                   ├── LecturerPanel.java
 │                   └── LibraryPanel.java

@@ -11,6 +11,7 @@ public class Student extends Person {
     private String programme;
     private LocalDate enrollmentDate;
     private int currentYear;
+    private java.util.List<Course> courses = new java.util.ArrayList<>();
 
     public Student() {
         super();
@@ -24,6 +25,9 @@ public class Student extends Person {
         this.enrollmentDate = enrollmentDate;
         this.currentYear = currentYear;
     }
+
+    public java.util.List<Course> getCourses() { return courses; }
+    public void setCourses(java.util.List<Course> courses) { this.courses = courses; }
 
     public String getRegistrationNumber() { return registrationNumber; }
     public void setRegistrationNumber(String registrationNumber) { this.registrationNumber = registrationNumber; }

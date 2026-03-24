@@ -7,8 +7,23 @@ public class Reservation {
     private Student   student;
     private Book      book;
     private LocalDate reservationDate;
+    private int id;
+    private String bookIsbn;
+    private int studentId;
+    private String status;
+    private boolean   notificationSent;
     private boolean   isFulfilled;    // true when student gets the book
 
+    public Reservation(int id, String bookIsbn, int studentId, LocalDate reservationDate, 
+                       String status, boolean notificationSent) {
+        this.id = id;
+        this.bookIsbn = bookIsbn;
+        this.studentId = studentId;
+        this.reservationDate = reservationDate;
+        this.status = status;
+        this.notificationSent = notificationSent;
+        this.isFulfilled = "fulfilled".equalsIgnoreCase(status);
+    }
 
     public Reservation(Student student, Book book) {
         this.student         = student;

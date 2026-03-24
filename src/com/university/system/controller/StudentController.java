@@ -2,6 +2,10 @@ package com.university.system.controller;
 
 import com.university.system.database.DatabaseConnection;
 import com.university.system.model.Student;
+import com.university.system.model.Course;
+import com.university.system.model.Score;
+import com.university.system.model.Book;
+import com.university.system.model.BorrowRecord;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;

@@ -253,6 +253,7 @@ public class AdminController {
                 rs.getString("course_code"),
                 rs.getDouble("cat_score"),
                 rs.getDouble("exam_score"),
+                rs.getDouble("total_score"),
                 rs.getString("grade"),
                 rs.getString("academic_year"),
                 rs.getInt("semester")));
@@ -421,15 +422,6 @@ public class AdminController {
 
   public List<BorrowRecord> viewStudentBorrowHistory(int studentId) {
     return studentController.viewBorrowHistory(studentId);
-  }
-
-  public ResultSet generateResultSlip(String registrationNumber) {
-    return studentController.viewResultSlip(studentController.getStudent(registrationNumber).getId());
-  }
-
-
-  public List<Student> viewAllStudentsInCourse(String courseCode) {
-    return lecturerController.viewAllStudentsInCourse(courseCode);
   }
 
   public Map<String, Object> fullLecturerReport(int lecturerId) {

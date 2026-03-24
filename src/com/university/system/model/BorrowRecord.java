@@ -17,6 +17,24 @@ public class BorrowRecord {
     private LocalDate dueDate;      
     private LocalDate returnDate;  
     private boolean   isReturned;
+    private int id;
+    private String bookIsbn;
+    private int studentId;
+    private String status;
+    private double fineAmount;
+
+    public BorrowRecord(int id, String bookIsbn, int studentId, LocalDate borrowDate, 
+                        LocalDate dueDate, LocalDate returnDate, String status, double fineAmount) {
+        this.id = id;
+        this.bookIsbn = bookIsbn;
+        this.studentId = studentId;
+        this.borrowDate = borrowDate;
+        this.dueDate = dueDate;
+        this.returnDate = returnDate;
+        this.status = status;
+        this.fineAmount = fineAmount;
+        this.isReturned = "returned".equalsIgnoreCase(status);
+    }
 
     public BorrowRecord(Student student, Book book) {
         this.student    = student;

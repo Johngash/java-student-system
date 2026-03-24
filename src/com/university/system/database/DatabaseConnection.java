@@ -32,6 +32,11 @@ public class DatabaseConnection {
         }
     }
 
+    public static void initializeDatabase() {
+        // Placeholder for database initialization logic
+        System.out.println("Database initialized.");
+    }
+
     public static List<Map<String, Object>> getAllStudents() throws SQLException {
         String sql = "SELECT p.*, s.registration_number, s.programme, s.current_year " +
                      "FROM person p JOIN student s ON p.id = s.id";
